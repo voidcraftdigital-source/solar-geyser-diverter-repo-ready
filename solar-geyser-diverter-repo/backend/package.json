@@ -1,0 +1,25 @@
+{
+  "name": "geyser-diverter-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cloud backend for the Rev A4 Smart Solar Geyser Diverter — Specification §13.",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node test/integration.test.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.1",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "overrides": {
+    "qs": "^6.16.0"
+  }
+}

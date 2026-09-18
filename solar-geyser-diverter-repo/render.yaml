@@ -1,0 +1,45 @@
+# Render Blueprint for the Geyser Diverter cloud backend
+# (solar-geyser-diverter/backend). Deploy via https://render.com/deploy
+# or "New +" -> "Blueprint" in the Render dashboard, pointing at this repo.
+#
+# Set to the FREE plan on purpose — this is for testing/demoing a prototype,
+# not running a paying customer's production backend. On the free plan:
+#   - the service sleeps after ~15 min idle, ~30-50s cold start on the next
+#     request (fine for a demo, mildly annoying if it's been idle)
+#   - there is no persistent disk, so the SQLite database resets on every
+#     restart/redeploy/sleep-wake cycle -- paired devices/accounts vanish
+#     and need re-pairing. Fine for "show it working," not fine for
+#     "someone relies on this day to day."
+# When this becomes a real, ongoing deployment (not just testing), switch
+# `plan: free` to `plan: starter` and uncomment the `disk:` block below so
+# data actually persists -- see backend/README.md's "Deploying it" section.
+#
+# Secrets (JWT_SECRET, MANUFACTURING_KEY, ALLOWED_ORIGINS) are deliberately
+# left out of this file (sync: false) — Render will prompt for them once in
+# the dashboard rather than storing real secrets in git.
+services:
+  - type: web
+    name: geyser-diverter-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    # disk:
+    #   name: geyser-data
+    #   mountPath: /var/data
+    #   sizeGB: 1
+    envVars:
+      # - key: DB_PATH
+      #   value: /var/data/data.sqlite   # only needed once the disk above is enabled
+      - key: TRUST_PROXY
+        value: "true"
+      - key: ALLOW_DEV_PROVISIONING
+        value: "false"
+      - key: JWT_SECRET
+        sync: false
+      - key: MANUFACTURING_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
