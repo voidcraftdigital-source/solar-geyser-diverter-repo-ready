@@ -1,0 +1,1338 @@
+<title>Geyser Diverter Console</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --ground:#eef1ec;
+    --surface:#ffffff;
+    --surface-2:#f5f7f2;
+    --border:#d8dfd4;
+    --ink:#16211c;
+    --ink-muted:#55655c;
+    --ink-faint:#8b9a8f;
+    --accent-solar:#eda100;
+    --accent-solar-ink:#8a5d00;
+    --accent-water:#1baf7a;
+    --accent-water-ink:#0f7a52;
+    --accent-grid:#4a3aa7;
+    --good:#0ca30c;
+    --serious:#ec835a;
+    --critical:#d03b3b;
+    --shadow:0 12px 28px -14px rgb(22 33 28 / .28);
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0d1512;
+      --surface:#16211c;
+      --surface-2:#1d2b24;
+      --border:#283a32;
+      --ink:#e9f1ea;
+      --ink-muted:#93a599;
+      --ink-faint:#5e6e63;
+      --accent-solar:#c98500;
+      --accent-solar-ink:#f5c15c;
+      --accent-water:#199e70;
+      --accent-water-ink:#4fd8ac;
+      --accent-grid:#9085e9;
+      --shadow:0 16px 34px -16px rgb(0 0 0 / .55);
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0d1512;
+    --surface:#16211c;
+    --surface-2:#1d2b24;
+    --border:#283a32;
+    --ink:#e9f1ea;
+    --ink-muted:#93a599;
+    --ink-faint:#5e6e63;
+    --accent-solar:#c98500;
+    --accent-solar-ink:#f5c15c;
+    --accent-water:#199e70;
+    --accent-water-ink:#4fd8ac;
+    --accent-grid:#9085e9;
+    --shadow:0 16px 34px -16px rgb(0 0 0 / .55);
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--ground);
+    color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.label-display{
+    font-family:"Big Shoulders Display","Arial Narrow",sans-serif;
+    font-weight:800;
+    letter-spacing:.02em;
+    text-wrap:balance;
+  }
+  .mono{ font-family:"JetBrains Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums; }
+
+  .wrap{ max-width:1180px; margin:0 auto; padding:22px 20px 60px; }
+
+  /* ---------- topbar ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    flex-wrap:wrap; padding-bottom:16px; margin-bottom:18px;
+    border-bottom:1px solid var(--border);
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand svg{ width:34px; height:34px; flex:none; }
+  .brand-name{ display:block; font-family:"Big Shoulders Display",sans-serif; font-weight:800; font-size:1.5rem; line-height:1; letter-spacing:.01em; }
+  .brand-tag{ display:block; margin-top:3px; font-size:.68rem; letter-spacing:.12em; color:var(--ink-muted); text-transform:uppercase; }
+
+  .topbar-right{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .sim-clock{ display:flex; align-items:center; gap:7px; color:var(--ink-muted); font-size:.82rem; }
+  .sim-clock svg{ width:15px; height:15px; }
+  .sim-clock .mono{ color:var(--ink); font-size:.86rem; }
+
+  .seg{ display:flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+  .seg button{
+    appearance:none; border:0; background:transparent; color:var(--ink-muted);
+    font:inherit; font-size:.76rem; font-weight:600; letter-spacing:.03em; text-transform:uppercase;
+    padding:7px 12px; cursor:pointer; border-left:1px solid var(--border);
+  }
+  .seg button:first-child{ border-left:0; }
+  .seg button.active{ background:var(--accent-water); color:#fff; }
+  .seg button:focus-visible, .tab:focus-visible, .chip button:focus-visible, button:focus-visible, input:focus-visible{
+    outline:2px solid var(--accent-water); outline-offset:2px;
+  }
+
+  /* ---------- banners ---------- */
+  .banner{
+    align-items:center; gap:10px; flex-wrap:wrap;
+    border-radius:10px; padding:11px 16px; margin-bottom:16px; font-size:.88rem;
+  }
+  .banner:not([hidden]){ display:flex; }
+  .banner svg{ width:17px; height:17px; flex:none; }
+  .banner.offline{ background:var(--surface-2); border:1px dashed var(--ink-faint); color:var(--ink-muted); }
+  .banner.info{ background:color-mix(in srgb, var(--accent-water) 12%, var(--surface)); border:1px solid color-mix(in srgb, var(--accent-water) 40%, var(--border)); color:var(--ink); }
+  .banner.fault{ background:color-mix(in srgb, var(--critical) 14%, var(--surface)); border:1px solid color-mix(in srgb, var(--critical) 45%, var(--border)); }
+  .banner.fault strong{ color:var(--critical); }
+  .banner.fault button{
+    margin-left:auto; appearance:none; border:1px solid var(--critical); background:var(--critical); color:#fff;
+    font:inherit; font-weight:600; font-size:.78rem; padding:6px 14px; border-radius:7px; cursor:pointer;
+  }
+  .banner.fault button:disabled{ opacity:.45; cursor:not-allowed; }
+
+  /* ---------- mode tabs ---------- */
+  .mode-tabs{ display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; }
+  .tab{
+    appearance:none; cursor:pointer; font-family:"Big Shoulders Display",sans-serif; font-weight:700;
+    font-size:.92rem; letter-spacing:.03em; text-transform:uppercase;
+    padding:10px 18px; border-radius:9px; border:1px solid var(--border); background:var(--surface); color:var(--ink-muted);
+  }
+  .tab.active{ background:var(--ink); color:var(--ground); border-color:var(--ink); }
+  :root:not([data-theme="light"]) .tab.active{ background:var(--accent-solar); color:#241500; border-color:var(--accent-solar); }
+  :root[data-theme="dark"] .tab.active{ background:var(--accent-solar); color:#241500; border-color:var(--accent-solar); }
+
+  /* ---------- layout ---------- */
+  .dash-grid{ display:grid; grid-template-columns:340px 1fr; gap:18px; align-items:start; }
+  @media (max-width:860px){ .dash-grid{ grid-template-columns:1fr; } }
+
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; }
+
+  /* ---------- gauge card ---------- */
+  .gauge-card{ box-shadow:var(--shadow); text-align:center; }
+  .gauge-wrap{ position:relative; margin:0 auto; width:100%; max-width:280px; }
+  .gauge-readout{ position:absolute; left:0; right:0; bottom:20%; display:flex; flex-direction:column; align-items:center; }
+  .gauge-temp{ font-size:2.9rem; font-weight:600; line-height:1; }
+  .gauge-unit{ font-size:1.1rem; color:var(--ink-muted); margin-left:2px; }
+  .gauge-target{ margin-top:4px; font-size:.78rem; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.08em; }
+
+  .status-chips{ display:flex; flex-direction:column; gap:8px; margin-top:18px; }
+  .chip{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:9px 13px; border-radius:9px; background:var(--surface-2); border:1px solid var(--border);
+    font-size:.82rem;
+  }
+  .chip .k{ color:var(--ink-muted); }
+  .chip .v{ font-weight:600; display:flex; align-items:center; gap:6px; }
+  .dot{ width:9px; height:9px; border-radius:50%; flex:none; }
+
+  /* ---------- stat grid ---------- */
+  .stat-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  @media (max-width:640px){ .stat-grid{ grid-template-columns:repeat(2,1fr); } }
+  .stat{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 15px; }
+  .stat .k{ font-size:.72rem; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.08em; }
+  .stat .v{ margin-top:6px; font-size:1.5rem; font-weight:600; }
+  .stat .v small{ font-size:.85rem; font-weight:500; color:var(--ink-muted); margin-left:2px; }
+  .bar-track{ margin-top:9px; height:6px; border-radius:4px; background:var(--surface-2); overflow:hidden; border:1px solid var(--border); position:relative; }
+  .bar-fill{ height:100%; border-radius:4px; transition:width .5s ease; }
+  .bar-mark{ position:absolute; top:-2px; bottom:-2px; width:2px; background:var(--ink-faint); }
+
+  /* ---------- trend card ---------- */
+  .trend-card{ grid-column:1 / -1; }
+  .trend-row{ display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+  @media (max-width:640px){ .trend-row{ grid-template-columns:1fr; } }
+  .trend-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .trend-name{ display:flex; align-items:center; gap:7px; font-size:.82rem; font-weight:600; }
+  .trend-now{ font-size:.82rem; color:var(--ink-muted); }
+  .spark{ width:100%; height:56px; display:block; }
+
+  /* ---------- details / drawers ---------- */
+  details.drawer{ margin-top:16px; background:var(--surface); border:1px solid var(--border); border-radius:14px; }
+  details.drawer summary{
+    cursor:pointer; list-style:none; padding:15px 20px; font-family:"Big Shoulders Display",sans-serif;
+    font-weight:700; letter-spacing:.02em; font-size:1.02rem; display:flex; align-items:center; gap:10px;
+  }
+  details.drawer summary::-webkit-details-marker{ display:none; }
+  details.drawer summary::before{ content:"▸"; color:var(--ink-faint); transition:transform .15s ease; font-size:.8em; }
+  details.drawer[open] summary::before{ transform:rotate(90deg); }
+  .drawer-body{ padding:0 20px 20px; border-top:1px solid var(--border); }
+  .drawer-body p.hint{ color:var(--ink-muted); font-size:.82rem; margin:14px 0 18px; max-width:60ch; }
+
+  .field-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:16px 22px; }
+  @media (max-width:640px){ .field-grid{ grid-template-columns:1fr; } }
+  .field{ padding-top:14px; }
+  .field label, .field .field-label{ display:flex; justify-content:space-between; font-size:.78rem; color:var(--ink-muted); margin-bottom:7px; text-transform:uppercase; letter-spacing:.06em; }
+  .field label span.val{ font-family:"JetBrains Mono",monospace; color:var(--ink); font-weight:600; text-transform:none; letter-spacing:0; }
+  input[type=range]{ width:100%; accent-color:var(--accent-water); }
+  input[type=time], input[type=text], input[type=email], input[type=password]{
+    width:100%; font:inherit; font-size:.88rem; padding:8px 10px; border-radius:7px; border:1px solid var(--border);
+    background:var(--surface-2); color:var(--ink);
+  }
+  .readonly-row{ display:flex; align-items:center; justify-content:space-between; padding:9px 12px; border-radius:8px; background:var(--surface-2); border:1px solid var(--border); font-size:.85rem; }
+  .readonly-row .v{ font-family:"JetBrains Mono",monospace; }
+
+  .sim-buttons{ display:flex; gap:10px; flex-wrap:wrap; padding-top:14px; }
+  .btn{
+    appearance:none; cursor:pointer; font:inherit; font-size:.8rem; font-weight:600; letter-spacing:.02em;
+    padding:9px 15px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink);
+  }
+  .btn.danger{ border-color:color-mix(in srgb, var(--critical) 50%, var(--border)); color:var(--critical); }
+  .btn.warn{ border-color:color-mix(in srgb, var(--serious) 55%, var(--border)); color:color-mix(in srgb, var(--serious) 80%, var(--ink)); }
+  .btn.reset{ margin-left:auto; }
+
+  footer.foot{ margin-top:26px; text-align:center; color:var(--ink-faint); font-size:.78rem; line-height:1.6; }
+  footer.foot code{ font-family:"JetBrains Mono",monospace; }
+
+  /* ---------- pairing ---------- */
+  .pair-btn{
+    display:flex; align-items:center; gap:7px; padding:7px 12px; border:1px solid var(--border); border-radius:8px;
+    background:var(--surface); color:var(--ink); font:inherit; font-size:.78rem; font-weight:600; cursor:pointer;
+  }
+  .seg button:disabled{ opacity:.4; cursor:not-allowed; }
+
+  .modal-backdrop{ position:fixed; inset:0; background:rgb(10 14 12 / .55); padding:20px; z-index:50; align-items:center; justify-content:center; }
+  .modal-backdrop:not([hidden]){ display:flex; }
+  .modal{ background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:26px; max-width:430px; width:100%; box-shadow:var(--shadow); position:relative; }
+  .modal h2{ margin:0 0 6px; font-size:1.32rem; }
+  .modal .hint{ color:var(--ink-muted); font-size:.82rem; margin:0 0 20px; max-width:42ch; }
+  .modal-close{
+    position:absolute; top:14px; right:14px; width:30px; height:30px; border-radius:8px; border:1px solid var(--border);
+    background:var(--surface-2); color:var(--ink-muted); font-size:1.15rem; line-height:1; cursor:pointer;
+  }
+  .qr-box{ background:#fff; padding:8px; border-radius:8px; border:1px solid var(--border); flex:none; line-height:0; }
+  .step-eyebrow{ display:block; font-size:.7rem; text-transform:uppercase; letter-spacing:.1em; color:var(--accent-water-ink); font-weight:700; margin-bottom:6px; }
+  .device-label{
+    display:flex; gap:16px; align-items:center; background:var(--surface-2); border:1px dashed var(--ink-faint);
+    border-radius:12px; padding:14px; margin:2px 0 14px;
+  }
+  .device-label-text{ display:flex; flex-direction:column; gap:1px; }
+  .device-label-text .k{ font-size:.66rem; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-muted); margin-top:8px; }
+  .device-label-text .k:first-child{ margin-top:0; }
+  .device-label-text .v{ font-weight:600; font-size:1rem; }
+  .device-label-caption{ margin:-8px 0 16px; font-size:.74rem; color:var(--ink-faint); }
+  .camera-box{ position:relative; border-radius:12px; overflow:hidden; background:#0a0f0d; margin:0 0 10px; aspect-ratio:4/3; }
+  .camera-box video{ width:100%; height:100%; object-fit:cover; display:block; }
+  .camera-frame{ position:absolute; inset:16%; border:2px solid var(--accent-water); border-radius:12px; }
+  .scan-status{ min-height:1.3em; font-size:.8rem; color:var(--ink-muted); margin:0 0 4px; }
+  .unpair-link{
+    appearance:none; border:0; background:none; color:var(--critical); font:inherit; font-size:.78rem;
+    text-decoration:underline; cursor:pointer; padding:0; margin-top:16px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; animation:none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <div class="banner info">
+    <span>Pairing makes real requests to the backend URL you set in Step 1. This single tab plays both roles at once: the simulated <strong>device</strong> (pushing telemetry, until a real unit is connected) and the <strong>remote viewer</strong> (fetching it back) — Remote mode is a real round trip through your backend, not a local shortcut.</span>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <circle cx="16" cy="12" r="6.4" fill="var(--accent-solar)"/>
+        <path d="M16 1v3.4M16 27.6V31M27.6 12H31M1 12h3.4M25 3.6l-2.4 2.4M9.4 3.6l2.4 2.4" stroke="var(--accent-solar)" stroke-width="2" stroke-linecap="round"/>
+        <path d="M9 22c1.6 3.4 4 5.4 7 5.4s5.4-2 7-5.4c-3-.9-4.6-2.9-7-6.6-2.4 3.7-4 5.7-7 6.6Z" fill="var(--accent-water)"/>
+      </svg>
+      <div>
+        <span class="brand-name">Geyser Diverter</span>
+        <span class="brand-tag">Rev A4 &middot; Prototype Web App</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="sim-clock">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.2 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span>Simulated clock</span>
+        <span class="mono" id="simClock">07:30</span>
+      </div>
+      <button class="pair-btn" id="pairOpenBtn">
+        <span class="dot" id="pairStatusDot" style="background:var(--ink-faint)"></span>
+        <span id="pairStatusText">Not paired</span>
+      </button>
+      <div class="seg" id="connSeg" role="group" aria-label="Connection">
+        <button data-conn="local" class="active">Local</button>
+        <button data-conn="remote" disabled title="Pair this device first">Remote</button>
+        <button data-conn="offline">Offline</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="banner offline" id="offlineBanner" hidden>
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 3l18 18M8.5 8.9A9.9 9.9 0 0 0 3.5 12M6.7 15.3a5.6 5.6 0 0 1 2.9-1.9M12 20h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    <span>Cloud link offline &mdash; showing last known telemetry from <strong class="mono" id="lastSeenTime">&mdash;</strong>. Local safety control keeps running unaffected.</span>
+  </div>
+
+  <div class="banner offline" id="remoteErrorBanner" hidden>
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 3l18 18M8.5 8.9A9.9 9.9 0 0 0 3.5 12M6.7 15.3a5.6 5.6 0 0 1 2.9-1.9M12 20h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    <span>Can't reach the backend for remote telemetry &mdash; showing last known data from <strong class="mono" id="remoteLastSeenTime">&mdash;</strong>. Check the backend URL and that the server is running.</span>
+  </div>
+
+  <nav class="mode-tabs" id="modeTabs" aria-label="Operating mode">
+    <button class="tab active" data-mode="auto">Auto Solar</button>
+    <button class="tab" data-mode="manual">Manual On</button>
+    <button class="tab" data-mode="off">Off</button>
+    <button class="tab" data-mode="schedule">Schedule</button>
+  </nav>
+
+  <div class="banner fault" id="faultBanner" hidden>
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 2 20h20L12 3Z" stroke="var(--critical)" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 10v4M12 17h.01" stroke="var(--critical)" stroke-width="1.9" stroke-linecap="round"/></svg>
+    <strong id="faultTitle">FAULT</strong>
+    <span id="faultDetail"></span>
+    <button id="ackFault">Acknowledge</button>
+  </div>
+
+  <main class="dash-grid">
+
+    <section class="card gauge-card">
+      <div class="gauge-wrap">
+        <svg id="gaugeSvg" viewBox="0 0 240 150" aria-hidden="true"></svg>
+        <div class="gauge-readout">
+          <div><span class="gauge-temp mono" id="tempReadout">51.2</span><span class="gauge-unit">&deg;C</span></div>
+          <span class="gauge-target">Target <span id="targetLabel">60</span>&deg;C</span>
+        </div>
+      </div>
+      <div class="status-chips">
+        <div class="chip"><span class="k">Heating</span><span class="v" id="heatChip"><span class="dot" style="background:var(--ink-faint)"></span>Idle</span></div>
+        <div class="chip"><span class="k">Source</span><span class="v" id="sourceChip"><span class="dot" style="background:var(--ink-faint)"></span>Off</span></div>
+        <div class="chip"><span class="k">Fault status</span><span class="v" id="faultChip"><span class="dot" style="background:var(--good)"></span>OK</span></div>
+        <div class="chip"><span class="k">Available surplus</span><span class="v mono" id="surplusChip">0 W</span></div>
+      </div>
+    </section>
+
+    <section class="stat-grid">
+      <div class="stat">
+        <div class="k">PV power</div>
+        <div class="v mono"><span id="pvVal">0.0</span><small>kW</small></div>
+      </div>
+      <div class="stat">
+        <div class="k">House load</div>
+        <div class="v mono"><span id="houseVal">0.0</span><small>kW</small></div>
+      </div>
+      <div class="stat">
+        <div class="k">Battery SOC</div>
+        <div class="v mono"><span id="socVal">0</span><small>%</small></div>
+        <div class="bar-track"><div class="bar-fill" id="socBar" style="background:var(--accent-water); width:0%"></div><div class="bar-mark" id="socReserveMark"></div></div>
+      </div>
+      <div class="stat">
+        <div class="k">Geyser power</div>
+        <div class="v mono"><span id="geyserPowerVal">0</span><small>W</small></div>
+        <div class="bar-track"><div class="bar-fill" id="powerBar" style="background:var(--accent-solar); width:0%"></div></div>
+      </div>
+      <div class="stat">
+        <div class="k">Geyser current</div>
+        <div class="v mono"><span id="geyserCurrentVal">0.0</span><small>A</small></div>
+        <div class="bar-track"><div class="bar-fill" id="currentBar" style="background:var(--accent-solar); width:0%"></div></div>
+      </div>
+      <div class="stat">
+        <div class="k">Battery reserve</div>
+        <div class="v mono"><span id="reserveVal">30</span><small>%</small></div>
+        <div style="margin-top:9px; font-size:.74rem; color:var(--ink-muted)">Stops below reserve, resumes above start threshold</div>
+      </div>
+    </section>
+
+    <section class="card trend-card">
+      <div class="trend-row">
+        <div>
+          <div class="trend-head">
+            <span class="trend-name"><span class="dot" style="background:var(--accent-solar)"></span>PV power &middot; last 12&nbsp;h</span>
+            <span class="trend-now mono" id="pvTrendNow">0.0 kW</span>
+          </div>
+          <svg class="spark" id="pvSpark" viewBox="0 0 300 56" preserveAspectRatio="none" aria-hidden="true"></svg>
+        </div>
+        <div>
+          <div class="trend-head">
+            <span class="trend-name"><span class="dot" style="background:var(--accent-water)"></span>Geyser power &middot; last 12&nbsp;h</span>
+            <span class="trend-now mono" id="geyserTrendNow">0 W</span>
+          </div>
+          <svg class="spark" id="geyserSpark" viewBox="0 0 300 56" preserveAspectRatio="none" aria-hidden="true"></svg>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <details class="drawer" open>
+    <summary>Customer settings <span style="font-family:'IBM Plex Sans'; font-weight:400; font-size:.72rem; color:var(--ink-muted); text-transform:none; letter-spacing:0;">&mdash; Specification &sect;22</span></summary>
+    <div class="drawer-body">
+      <p class="hint">Adjusts the live simulation. Installer-only settings (CT/voltage/temperature calibration, inverter protocol, safety thresholds &mdash; Section 22) are not exposed on this screen.</p>
+      <div class="field-grid">
+        <div class="field">
+          <label for="targetTemp">Target temperature <span class="val" id="targetOut">60&deg;C</span></label>
+          <input type="range" id="targetTemp" min="50" max="70" value="60" step="1">
+        </div>
+        <div class="field">
+          <label for="minStartTemp">Minimum start temperature <span class="val" id="minStartOut">45&deg;C</span></label>
+          <input type="range" id="minStartTemp" min="30" max="55" value="45" step="1">
+        </div>
+        <div class="field">
+          <label for="maxTemp">High-temperature safety limit <span class="val" id="maxTempOut">75&deg;C</span></label>
+          <input type="range" id="maxTemp" min="70" max="80" value="75" step="1">
+        </div>
+        <div class="field">
+          <label for="battStop">Battery reserve &mdash; stop below <span class="val" id="battStopOut">30%</span></label>
+          <input type="range" id="battStop" min="10" max="50" value="30" step="1">
+        </div>
+        <div class="field">
+          <label for="battStart">Battery reserve &mdash; resume above <span class="val" id="battStartOut">35%</span></label>
+          <input type="range" id="battStart" min="15" max="60" value="35" step="1">
+        </div>
+        <div class="field">
+          <span class="field-label">Schedule window <span class="val" id="scheduleOut">12:00&ndash;17:00</span></span>
+          <div style="display:flex; gap:10px;">
+            <input type="time" id="schedStart" value="12:00" aria-label="Schedule start time">
+            <input type="time" id="schedEnd" value="17:00" aria-label="Schedule end time">
+          </div>
+        </div>
+        <div class="field">
+          <label for="deviceName">Device name</label>
+          <input type="text" id="deviceName" value="Geyser Diverter &ndash; Garage">
+        </div>
+        <div class="field">
+          <span class="field-label" id="wifiLabel">Wi&#8209;Fi</span>
+          <div class="readonly-row" role="group" aria-labelledby="wifiLabel"><span>Home-5G</span><span class="v mono" style="color:var(--good)">connected</span></div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <details class="drawer">
+    <summary>Simulator test controls <span style="font-family:'IBM Plex Sans'; font-weight:400; font-size:.72rem; color:var(--ink-muted); text-transform:none; letter-spacing:0;">&mdash; demo only</span></summary>
+    <div class="drawer-body">
+      <p class="hint">Not part of the production UI &mdash; these buttons only exist here to demonstrate the fault-latch and acknowledgement behaviour from Specification &sect;16 against simulated telemetry.</p>
+      <div class="sim-buttons">
+        <button class="btn warn" id="btnSimOvertemp">Force over-temperature fault</button>
+        <button class="btn danger" id="btnSimSensor">Force sensor fault</button>
+        <button class="btn reset" id="btnReset">Reset simulation</button>
+      </div>
+    </div>
+  </details>
+
+  <footer class="foot">
+    UI prototype of the Rev A4 web app described in <code>SPECIFICATION.md</code> &sect;12&ndash;13 &mdash; running on simulated telemetry, not connected to ESP32 hardware.<br>
+    Local view and remote/cloud view share this same interface; only the connection path differs.
+  </footer>
+
+</div>
+
+<div class="modal-backdrop" id="pairBackdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pairTitle">
+    <button class="modal-close" id="pairClose" aria-label="Close">&times;</button>
+
+    <div class="pair-step" id="stepScan">
+      <span class="step-eyebrow">Step 1 of 2</span>
+      <h2 id="pairTitle">Scan the code on your unit</h2>
+      <p class="hint">Every unit ships with a QR code and claim code printed on its enclosure label &mdash; Specification &sect;13. Point your camera at it, or read it off below.</p>
+
+      <div class="field" style="padding-top:0;">
+        <label for="backendUrl">Backend URL</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="backendUrl" placeholder="https://solar-geyser-diverter-repo-ready.onrender.com" style="flex:1;">
+          <button class="btn" type="button" id="btnUseBackend" style="margin-top:0; white-space:nowrap;">Use this URL</button>
+        </div>
+      </div>
+
+      <div class="device-label">
+        <div class="qr-box"><canvas id="qrCanvas" width="108" height="108"></canvas></div>
+        <div class="device-label-text">
+          <span class="k">Device ID</span>
+          <span class="mono v" id="deviceIdOut">&mdash;</span>
+          <span class="k">Claim code</span>
+          <span class="mono v" id="pinOut">&mdash;</span>
+        </div>
+      </div>
+      <p class="device-label-caption">Requested from the backend above, standing in for the physical label &mdash; the unit itself has no screen.</p>
+
+      <div class="camera-box" id="cameraBox" hidden>
+        <video id="cameraVideo" autoplay playsinline muted></video>
+        <div class="camera-frame"></div>
+      </div>
+      <p class="scan-status" id="scanStatus"></p>
+
+      <div class="sim-buttons">
+        <button class="btn" id="btnScanCamera">Scan with camera</button>
+        <button class="btn" id="btnScanManual">Enter code manually</button>
+      </div>
+    </div>
+
+    <div class="pair-step" id="stepAccount" hidden>
+      <span class="step-eyebrow">Step 2 of 2</span>
+      <h2>Sign in or create an account</h2>
+      <p class="hint">Links device <strong class="mono" id="scannedIdOut"></strong> to your account so it's reachable remotely &mdash; Specification &sect;13. New installers create an account here; no pre-existing account is required.</p>
+
+      <div class="seg" id="authSeg" role="group" aria-label="Account action" style="margin-bottom:16px;">
+        <button data-auth="create" class="active">Create account</button>
+        <button data-auth="signin">Sign in</button>
+      </div>
+
+      <div class="field" style="padding-top:0;">
+        <label for="authEmail">Email</label>
+        <input type="email" id="authEmail" placeholder="you@example.com">
+      </div>
+      <div class="field">
+        <label for="authPassword">Password</label>
+        <input type="password" id="authPassword" placeholder="At least 8 characters">
+      </div>
+      <p class="scan-status" id="authStatus"></p>
+
+      <div class="sim-buttons">
+        <button class="btn" id="btnBackToScan">Back</button>
+        <button class="btn" id="btnFinishPair" style="border-color:var(--good); color:var(--good)">Create account &amp; link device</button>
+      </div>
+    </div>
+
+    <div class="pair-step" id="stepDone" hidden>
+      <h2>Device linked</h2>
+      <p class="hint" id="doneMessage">This unit is now linked to your account and reachable remotely.</p>
+      <div class="sim-buttons">
+        <button class="btn" id="btnPairDone" style="border-color:var(--good); color:var(--good)">Done</button>
+      </div>
+    </div>
+
+    <button class="unpair-link" id="btnUnpair" hidden>Unpair this device</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- gauge geometry ---------------- */
+  var GCX = 120, GCY = 130, GR = 100, GR_ZONE = 100, GAUGE_MAX = 90;
+  function angleForTemp(t){
+    t = Math.max(0, Math.min(GAUGE_MAX, t));
+    return -90 + (t / GAUGE_MAX) * 180;
+  }
+  function polar(cx, cy, r, angleDeg){
+    var rad = (angleDeg - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+  function arcPath(cx, cy, r, a0, a1){
+    var s = polar(cx, cy, r, a1), e = polar(cx, cy, r, a0);
+    var large = (a1 - a0) <= 180 ? "0" : "1";
+    return "M " + s.x.toFixed(2) + " " + s.y.toFixed(2) + " A " + r + " " + r + " 0 " + large + " 0 " + e.x.toFixed(2) + " " + e.y.toFixed(2);
+  }
+  var svgns = "http://www.w3.org/2000/svg";
+  function el(tag, attrs){
+    var n = document.createElementNS(svgns, tag);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+
+  var gaugeSvg = document.getElementById("gaugeSvg");
+  var needleG, zonesG;
+
+  function buildGauge(){
+    gaugeSvg.innerHTML = "";
+    gaugeSvg.appendChild(el("path", { d: arcPath(GCX, GCY, GR, -90, 90), stroke: "var(--surface-2)", "stroke-width": 16, fill: "none", "stroke-linecap": "round" }));
+    zonesG = el("g", {});
+    gaugeSvg.appendChild(zonesG);
+    // ticks at 0 / 45 / 90 scale reference
+    [0, 45, 90].forEach(function(t){
+      var p1 = polar(GCX, GCY, GR + 11, angleForTemp(t));
+      gaugeSvg.appendChild(el("text", { x: p1.x, y: p1.y, "text-anchor": "middle", "font-size": "9", fill: "var(--ink-faint)", "font-family": "JetBrains Mono, monospace" })).textContent = t;
+    });
+    needleG = el("g", {});
+    needleG.appendChild(el("line", { id: "needleLine", x1: GCX, y1: GCY, x2: GCX, y2: GCY - (GR - 26), stroke: "var(--ink)", "stroke-width": 3, "stroke-linecap": "round" }));
+    needleG.appendChild(el("circle", { cx: GCX, cy: GCY, r: 6, fill: "var(--ink)" }));
+    gaugeSvg.appendChild(needleG);
+  }
+
+  function redrawZones(minStart, target, maxT){
+    while (zonesG.firstChild) zonesG.removeChild(zonesG.firstChild);
+    var gap = 1.4; // angular gap between zone segments
+    var zones = [
+      { a: 0, b: minStart, color: "var(--ink-faint)" },
+      { a: minStart, b: target, color: "var(--accent-water)" },
+      { a: target, b: maxT, color: "var(--serious)" },
+      { a: maxT, b: GAUGE_MAX, color: "var(--critical)" }
+    ];
+    zones.forEach(function(z){
+      var a0 = angleForTemp(z.a) + gap, a1 = angleForTemp(z.b) - gap;
+      if (a1 <= a0) return;
+      zonesG.appendChild(el("path", { d: arcPath(GCX, GCY, GR, a0, a1), stroke: z.color, "stroke-width": 16, fill: "none", "stroke-linecap": "butt" }));
+    });
+  }
+
+  function setNeedle(temp){
+    var ang = angleForTemp(temp);
+    needleG.setAttribute("transform", "rotate(" + ang.toFixed(1) + " " + GCX + " " + GCY + ")");
+  }
+
+  buildGauge();
+
+  /* ---------------- sparklines ---------------- */
+  function Sparkline(svgId, maxVal, color, len){
+    var svg = document.getElementById(svgId);
+    var W = 300, H = 56;
+    var data = new Array(len).fill(0);
+    var path = el("path", { fill: color, opacity: "0.16", stroke: "none" });
+    var line = el("path", { fill: "none", stroke: color, "stroke-width": "2", "stroke-linejoin": "round", "stroke-linecap": "round" });
+    var grid = el("line", { x1: 0, y1: H - 1, x2: W, y2: H - 1, stroke: "var(--border)", "stroke-width": "1" });
+    var dot = el("circle", { r: 3.2, fill: color });
+    svg.appendChild(grid); svg.appendChild(path); svg.appendChild(line); svg.appendChild(dot);
+    this.push = function(v){
+      data.push(v); data.shift();
+      var pts = data.map(function(d, i){
+        var x = (i / (len - 1)) * W;
+        var y = H - Math.max(0, Math.min(1, d / maxVal)) * (H - 6) - 2;
+        return [x, y];
+      });
+      var lineD = "M " + pts.map(function(p){ return p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" L ");
+      var areaD = lineD + " L " + W + " " + H + " L 0 " + H + " Z";
+      line.setAttribute("d", lineD);
+      path.setAttribute("d", areaD);
+      var last = pts[pts.length - 1];
+      dot.setAttribute("cx", last[0]); dot.setAttribute("cy", last[1]);
+    };
+  }
+  var pvSpark = new Sparkline("pvSpark", 4.5, "var(--accent-solar)", 72);
+  var geyserSpark = new Sparkline("geyserSpark", 3200, "var(--accent-water)", 72);
+
+  /* ---------------- state ---------------- */
+  var settings = { target: 60, minStart: 45, maxTemp: 75, battStop: 30, battStart: 35, schedStart: 12 * 60, schedEnd: 17 * 60 };
+  var state = {
+    simMin: 7 * 60 + 30,
+    mode: "auto",
+    conn: "local",
+    pv: 0, house: 0, soc: 62,
+    temp: 38,
+    geyserPowerW: 0, source: "off", heating: false,
+    battAllowed: true,
+    fault: null, // {code,title,detail}
+    _surplus: 0
+  };
+  var display = null;   // frozen snapshot while offline
+  var lastSeenAt = null;
+
+  var TICK_MS = 1000, SIM_MIN_PER_TICK = 10;
+
+  function fmtClock(mins){
+    mins = ((mins % 1440) + 1440) % 1440;
+    var h = Math.floor(mins / 60), m = Math.floor(mins % 60);
+    return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
+  }
+
+  function pvModel(mins){
+    var h = mins / 60;
+    if (h < 6 || h > 18.5) return 0;
+    var x = (h - 12.25) / 6.25;
+    var base = Math.max(0, Math.cos(x * Math.PI / 2));
+    var pv = 4.3 * Math.pow(base, 1.3);
+    var flicker = 0.9 + 0.1 * Math.sin(mins * 0.9) + 0.03 * Math.sin(mins * 3.1);
+    return Math.max(0, pv * flicker);
+  }
+  function houseModel(mins){
+    var h = mins / 60;
+    var morning = 1.3 * Math.exp(-Math.pow((h - 7) / 1.1, 2));
+    var evening = 1.7 * Math.exp(-Math.pow((h - 18.5) / 1.3, 2));
+    var base = 0.42 + 0.1 * Math.sin(mins * 0.5);
+    return Math.max(0.15, base + morning + evening);
+  }
+
+  function triggerFault(code, title, detail){
+    if (state.fault) return;
+    state.fault = { code: code, title: title, detail: detail };
+  }
+  function clearFault(){ state.fault = null; }
+
+  function tick(){
+    state.simMin = (state.simMin + SIM_MIN_PER_TICK) % 1440;
+    state.pv = pvModel(state.simMin);
+    state.house = houseModel(state.simMin);
+
+    var battChargeReserveW = state.soc < 95 ? 500 : 0;
+    var minStartPowerW = 200;
+
+    // battery hysteresis
+    if (state.soc < settings.battStop) state.battAllowed = false;
+    else if (state.soc > settings.battStart) state.battAllowed = true;
+
+    var inSchedule = (function(){
+      var s = settings.schedStart, e = settings.schedEnd, m = state.simMin;
+      return s <= e ? (m >= s && m < e) : (m >= s || m < e);
+    })();
+
+    var geyserPowerW = 0, source = "off", heating = false;
+
+    if (state.fault){
+      geyserPowerW = 0; source = "off"; heating = false;
+    } else if (state.temp >= settings.maxTemp){
+      triggerFault("OVER_TEMPERATURE", "Over-temperature fault", "Geyser reached the " + settings.maxTemp + "°C safety limit — heating disabled, acknowledgement required.");
+      geyserPowerW = 0; source = "off"; heating = false;
+    } else if (state.temp >= settings.target){
+      geyserPowerW = 0; source = "off"; heating = false;
+    } else if (state.mode === "off"){
+      geyserPowerW = 0; source = "off"; heating = false;
+    } else if (state.mode === "manual"){
+      if (!state.battAllowed){ geyserPowerW = 0; source = "off"; }
+      else { geyserPowerW = 3000; source = "inverter"; heating = true; }
+    } else if (state.mode === "auto" || (state.mode === "schedule" && inSchedule)){
+      if (!state.battAllowed){ geyserPowerW = 0; source = "off"; }
+      else {
+        var surplusW = Math.max(0, state.pv * 1000 - state.house * 1000 - battChargeReserveW);
+        if (surplusW > minStartPowerW){
+          geyserPowerW = Math.min(surplusW, 3000, 16 * 230);
+          source = "inverter"; heating = true;
+        } else { geyserPowerW = 0; source = "off"; }
+      }
+    } else {
+      geyserPowerW = 0; source = "off"; heating = false;
+    }
+    heating = geyserPowerW > 0;
+
+    state.geyserPowerW = geyserPowerW;
+    state.source = source;
+    state.heating = heating;
+    state._surplus = Math.max(0, state.pv * 1000 - state.house * 1000 - battChargeReserveW);
+
+    // battery SOC dynamics
+    var netW = (state.pv * 1000) - (state.house * 1000) - geyserPowerW;
+    netW = Math.max(-2200, Math.min(2600, netW));
+    var capacityWh = 5200, hoursPerTick = SIM_MIN_PER_TICK / 60;
+    state.soc = Math.max(0, Math.min(100, state.soc + (netW * hoursPerTick / capacityWh) * 100));
+
+    // temperature dynamics — sub-stepped so a target/max crossing cuts power within
+    // this tick rather than a full tick late, which otherwise overshoots by several
+    // degrees at full power and reads as exactly the "hunting" Specification §29 warns against
+    var maxHeatRatePerHour = 17, lossPerHourAt40Above = 1.1, ambient = 19;
+    var subSteps = 6, subHours = hoursPerTick / subSteps;
+    for (var step = 0; step < subSteps; step++){
+      if (heating && (state.temp >= settings.target || state.temp >= settings.maxTemp)){
+        heating = false; geyserPowerW = 0; source = "off";
+      }
+      var dHeat = heating ? (geyserPowerW / 3000) * maxHeatRatePerHour * subHours : 0;
+      var idleCool = !heating ? (2.4 * subHours) : 0;
+      var standbyLoss = lossPerHourAt40Above * subHours * Math.max(0, (state.temp - ambient) / 40);
+      state.temp = Math.max(ambient - 2, state.temp + dHeat - standbyLoss - idleCool);
+    }
+    state.geyserPowerW = geyserPowerW;
+    state.source = source;
+    state.heating = heating;
+    if (state.fault && state.fault.code === "OVER_TEMPERATURE" && state.temp < settings.maxTemp - 3){
+      state.fault.clearable = true;
+    }
+
+    pvSpark.push(state.pv);
+    geyserSpark.push(state.geyserPowerW);
+
+    // "local" reflects this tick's simulation directly. "offline" freezes
+    // whatever display already held. "remote" is intentionally left alone
+    // here — its display comes from fetchRemoteTelemetry() polling the
+    // backend, a real round trip instead of a local shortcut.
+    if (state.conn === "local"){
+      display = snapshot();
+      lastSeenAt = fmtClock(state.simMin);
+    }
+    render();
+  }
+
+  function snapshot(){
+    return {
+      simMin: state.simMin, pv: state.pv, house: state.house, soc: state.soc, temp: state.temp,
+      geyserPowerW: state.geyserPowerW, source: state.source, heating: state.heating,
+      fault: state.fault, surplus: state._surplus
+    };
+  }
+
+  /* ---------------- render ---------------- */
+  var $ = function(id){ return document.getElementById(id); };
+
+  function render(){
+    var d = display || snapshot();
+
+    $("simClock").textContent = fmtClock(state.simMin);
+    $("targetLabel").textContent = settings.target;
+
+    setNeedle(d.temp);
+    $("tempReadout").textContent = d.temp.toFixed(1);
+
+    var heatChip = $("heatChip");
+    heatChip.innerHTML = d.heating
+      ? '<span class="dot" style="background:var(--accent-solar)"></span>Heating'
+      : '<span class="dot" style="background:var(--ink-faint)"></span>Idle';
+
+    var sourceChip = $("sourceChip");
+    var srcColor = d.source === "inverter" ? "var(--accent-solar)" : d.source === "grid" ? "var(--accent-grid)" : "var(--ink-faint)";
+    var srcLabel = d.source === "inverter" ? "Inverter" : d.source === "grid" ? "Grid" : "Off";
+    sourceChip.innerHTML = '<span class="dot" style="background:' + srcColor + '"></span>' + srcLabel;
+
+    var faultChip = $("faultChip");
+    faultChip.innerHTML = d.fault
+      ? '<span class="dot" style="background:var(--critical)"></span>Fault'
+      : '<span class="dot" style="background:var(--good)"></span>OK';
+
+    $("surplusChip").textContent = Math.round(d.surplus) + " W";
+
+    $("pvVal").textContent = d.pv.toFixed(1);
+    $("houseVal").textContent = d.house.toFixed(1);
+    $("socVal").textContent = Math.round(d.soc);
+    $("socBar").style.width = Math.round(d.soc) + "%";
+    $("socReserveMark").style.left = settings.battStop + "%";
+    $("geyserPowerVal").textContent = Math.round(d.geyserPowerW);
+    $("powerBar").style.width = (d.geyserPowerW / 3000 * 100).toFixed(1) + "%";
+    var amps = d.geyserPowerW / 230;
+    $("geyserCurrentVal").textContent = amps.toFixed(1);
+    $("currentBar").style.width = Math.min(100, amps / 16 * 100).toFixed(1) + "%";
+    $("reserveVal").textContent = settings.battStop;
+
+    $("pvTrendNow").textContent = d.pv.toFixed(1) + " kW";
+    $("geyserTrendNow").textContent = Math.round(d.geyserPowerW) + " W";
+
+    // offline banner
+    var offlineBanner = $("offlineBanner");
+    if (state.conn === "offline"){
+      offlineBanner.hidden = false;
+      $("lastSeenTime").textContent = lastSeenAt || "—";
+    } else offlineBanner.hidden = true;
+
+    // remote-fetch-error banner (distinct from the offline banner above:
+    // this is "chose Remote, but the backend round trip is failing")
+    var remoteErrorBanner = $("remoteErrorBanner");
+    if (state.conn === "remote" && remoteFetchFailing){
+      remoteErrorBanner.hidden = false;
+      $("remoteLastSeenTime").textContent = lastSeenAt || "—";
+    } else remoteErrorBanner.hidden = true;
+
+    // fault banner (always reflects true live state, not frozen snapshot,
+    // since local safety keeps latching/annunciating regardless of link)
+    var faultBanner = $("faultBanner");
+    var ack = $("ackFault");
+    if (state.fault){
+      faultBanner.hidden = false;
+      $("faultTitle").textContent = state.fault.title;
+      $("faultDetail").textContent = state.fault.detail;
+      ack.disabled = !state.fault.clearable;
+      ack.textContent = state.fault.clearable ? "Acknowledge" : "Condition still active";
+    } else {
+      faultBanner.hidden = true;
+    }
+  }
+
+  /* ---------------- controls ---------------- */
+  document.getElementById("modeTabs").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-mode]");
+    if (!b) return;
+    state.mode = b.getAttribute("data-mode");
+    document.querySelectorAll("#modeTabs .tab").forEach(function(t){ t.classList.toggle("active", t === b); });
+  });
+
+  document.getElementById("connSeg").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-conn]");
+    if (!b || b.disabled) return;
+    state.conn = b.getAttribute("data-conn");
+    document.querySelectorAll("#connSeg button").forEach(function(t){ t.classList.toggle("active", t === b); });
+    if (state.conn === "remote" && pairState.paired){
+      startRemoteFetch();
+    } else {
+      stopRemoteFetch();
+      if (state.conn !== "offline"){ display = snapshot(); lastSeenAt = fmtClock(state.simMin); }
+    }
+    render();
+  });
+
+  $("ackFault").addEventListener("click", function(){
+    if (state.fault && state.fault.clearable) clearFault();
+    render();
+  });
+  $("btnSimOvertemp").addEventListener("click", function(){
+    state.temp = settings.maxTemp + 1;
+  });
+  $("btnSimSensor").addEventListener("click", function(){
+    triggerFault("TEMP_SENSOR_FAULT", "Temperature sensor fault", "PT1000 reading out of range — treated as disconnected/shorted per Specification §7.");
+    state.fault.clearable = true;
+  });
+  $("btnReset").addEventListener("click", function(){
+    state.simMin = 7 * 60 + 30; state.soc = 62; state.temp = 38; state.fault = null; display = null;
+    pvSpark = new Sparkline("pvSpark", 4.5, "var(--accent-solar)", 72);
+    geyserSpark = new Sparkline("geyserSpark", 3200, "var(--accent-water)", 72);
+  });
+
+  function setClamped(id, outId, key, value, suffix){
+    value = Math.round(value);
+    $(id).value = value; settings[key] = value; $(outId).textContent = value + suffix;
+  }
+  // Target/min-start/max-temp are interdependent (minStart < target < maxTemp).
+  // Each slider clamps against the other two instead of allowing an inverted
+  // setting through — an inverted order silently drops a whole zone from the
+  // gauge and breaks the "below start temperature" reading.
+  $("minStartTemp").addEventListener("input", function(){
+    setClamped("minStartTemp", "minStartOut", "minStart", Math.min(Number(this.value), settings.target - 1), "°C");
+    redrawZones(settings.minStart, settings.target, settings.maxTemp);
+    render();
+  });
+  $("targetTemp").addEventListener("input", function(){
+    var v = Math.max(Math.min(Number(this.value), settings.maxTemp - 1), settings.minStart + 1);
+    setClamped("targetTemp", "targetOut", "target", v, "°C");
+    redrawZones(settings.minStart, settings.target, settings.maxTemp);
+    render();
+  });
+  $("maxTemp").addEventListener("input", function(){
+    setClamped("maxTemp", "maxTempOut", "maxTemp", Math.max(Number(this.value), settings.target + 1), "°C");
+    redrawZones(settings.minStart, settings.target, settings.maxTemp);
+    render();
+  });
+  // Battery stop/resume thresholds are interdependent the same way (stop < resume).
+  $("battStop").addEventListener("input", function(){
+    setClamped("battStop", "battStopOut", "battStop", Math.min(Number(this.value), settings.battStart - 1), "%");
+  });
+  $("battStart").addEventListener("input", function(){
+    setClamped("battStart", "battStartOut", "battStart", Math.max(Number(this.value), settings.battStop + 1), "%");
+  });
+  function syncSchedule(){
+    var s = $("schedStart").value.split(":"), e = $("schedEnd").value.split(":");
+    settings.schedStart = (+s[0]) * 60 + (+s[1]);
+    settings.schedEnd = (+e[0]) * 60 + (+e[1]);
+    $("scheduleOut").textContent = $("schedStart").value + "–" + $("schedEnd").value;
+  }
+  $("schedStart").addEventListener("input", syncSchedule);
+  $("schedEnd").addEventListener("input", syncSchedule);
+
+  /* ---------------- pairing: real requests to the backend from ../backend ---------------- */
+  var pairState = { paired: false, deviceId: null, deviceSecret: null, claimCode: "", token: null, authMode: "create" };
+  var qrInstance = null;
+  var cameraStream = null, detectorTimer = null;
+  var LS_URL_KEY = "geyserDiverterBackendUrl";
+  var LS_PAIR_KEY = "geyserDiverterLivePairing";
+
+  function backendUrl(){
+    var input = document.getElementById("backendUrl");
+    var v = (input && input.value || "").trim();
+    return v || "https://solar-geyser-diverter-repo-ready.onrender.com";
+  }
+
+  // Every call funnels through here: never throws, always resolves to
+  // {ok, status, data} — a network failure (backend not running, wrong URL,
+  // CORS block) looks the same as any other non-2xx response to callers,
+  // so every call site handles it with one code path instead of a try/catch
+  // scattered everywhere.
+  async function apiFetch(path, opts){
+    try {
+      var res = await fetch(backendUrl() + path, opts || {});
+      var data = null;
+      try { data = await res.json(); } catch (e) { data = null; }
+      return { ok: res.ok, status: res.status, data: data };
+    } catch (err) {
+      return { ok: false, status: 0, data: { error: "network error: " + err.message } };
+    }
+  }
+
+  function basicAuthHeader(id, secret){ return "Basic " + btoa(id + ":" + secret); }
+
+  function qrToken(){ return "GEYSERDIVERTER:CLAIM:" + pairState.deviceId + ":" + pairState.claimCode; }
+
+  function renderLabel(){
+    var canvas = document.getElementById("qrCanvas");
+    if (window.QRious){
+      if (!qrInstance) qrInstance = new QRious({ element: canvas, size: 108, background: "#ffffff", foreground: "#141d18", level: "M" });
+      qrInstance.value = qrToken();
+    } else {
+      // CDN unreachable in this preview — the printed claim code still works as a fallback
+      var ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, 108, 108);
+      ctx.fillStyle = "#55655c"; ctx.font = "10px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("QR unavailable —", 54, 50);
+      ctx.fillText("use code at right", 54, 64);
+    }
+    document.getElementById("pinOut").textContent = pairState.claimCode.slice(0, 3) + " " + pairState.claimCode.slice(3);
+    document.getElementById("deviceIdOut").textContent = pairState.deviceId;
+  }
+
+  // Stands in for "the label already exists" — real hardware has this baked
+  // in at manufacture; this test client asks the backend's dev-only
+  // provisioning endpoint for one instead. See backend/src/routes/dev.js.
+  async function provisionDevice(){
+    var statusEl = document.getElementById("scanStatus");
+    var idOut = document.getElementById("deviceIdOut"), pinOutEl = document.getElementById("pinOut");
+    statusEl.textContent = "Requesting a device from the backend…";
+    idOut.textContent = "…"; pinOutEl.textContent = "…";
+
+    var res = await apiFetch("/api/dev/provision-device", { method: "POST" });
+    if (!res.ok){
+      var msg = res.status === 404
+        ? "Backend reachable, but dev provisioning is off (set ALLOW_DEV_PROVISIONING=true in its .env and restart it)."
+        : res.status === 0
+          ? "Couldn't reach " + backendUrl() + " — is the backend running and the URL correct?"
+          : "Backend error: " + (res.data && res.data.error ? res.data.error : "status " + res.status);
+      statusEl.textContent = msg;
+      idOut.textContent = "—"; pinOutEl.textContent = "—";
+      return;
+    }
+
+    pairState.deviceId = res.data.device_id;
+    pairState.deviceSecret = res.data.device_secret;
+    pairState.claimCode = res.data.claim_code;
+    statusEl.textContent = "";
+    renderLabel();
+  }
+
+  function updatePairUI(){
+    document.getElementById("pairStatusDot").style.background = pairState.paired ? "var(--good)" : "var(--ink-faint)";
+    document.getElementById("pairStatusText").textContent = pairState.paired ? "Paired" : "Not paired";
+    var remoteBtn = document.querySelector('#connSeg button[data-conn="remote"]');
+    remoteBtn.disabled = !pairState.paired;
+    remoteBtn.title = pairState.paired ? "" : "Pair this device first";
+    document.getElementById("btnUnpair").hidden = !pairState.paired;
+    if (pairState.paired) startTelemetryPush(); else { stopTelemetryPush(); stopRemoteFetch(); }
+  }
+
+  function savePairing(){
+    try {
+      localStorage.setItem(LS_PAIR_KEY, JSON.stringify({
+        token: pairState.token, deviceId: pairState.deviceId, deviceSecret: pairState.deviceSecret, paired: pairState.paired
+      }));
+    } catch (e) { /* private browsing / storage disabled — just skip persistence */ }
+  }
+  function loadPairing(){
+    try {
+      var raw = localStorage.getItem(LS_PAIR_KEY);
+      if (!raw) return;
+      var saved = JSON.parse(raw);
+      if (saved.paired && saved.token && saved.deviceId && saved.deviceSecret){
+        pairState.token = saved.token; pairState.deviceId = saved.deviceId;
+        pairState.deviceSecret = saved.deviceSecret; pairState.paired = true;
+      }
+    } catch (e) { /* corrupt or inaccessible storage — start unpaired */ }
+  }
+  function clearPairingStorage(){
+    try { localStorage.removeItem(LS_PAIR_KEY); } catch (e) {}
+  }
+
+  function showStep(id){
+    ["stepScan", "stepAccount", "stepDone"].forEach(function(s){
+      document.getElementById(s).hidden = (s !== id);
+    });
+  }
+
+  function stopCamera(){
+    if (detectorTimer){ clearInterval(detectorTimer); detectorTimer = null; }
+    if (cameraStream){ cameraStream.getTracks().forEach(function(t){ t.stop(); }); cameraStream = null; }
+    document.getElementById("cameraBox").hidden = true;
+  }
+
+  function advanceToAccount(){
+    if (!pairState.deviceId){
+      document.getElementById("scanStatus").textContent = "No device yet — check the backend URL above and try again.";
+      return;
+    }
+    stopCamera();
+    document.getElementById("scannedIdOut").textContent = pairState.deviceId;
+    showStep("stepAccount");
+  }
+
+  var modalFocusTrigger = null;
+
+  function getFocusable(container){
+    var sel = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    return Array.prototype.slice.call(container.querySelectorAll(sel)).filter(function(el){
+      return !el.closest("[hidden]");
+    });
+  }
+  function trapModalTab(e){
+    if (e.key !== "Tab") return;
+    var focusables = getFocusable(document.querySelector("#pairBackdrop .modal"));
+    if (!focusables.length) return;
+    var first = focusables[0], last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first){
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last){
+      e.preventDefault(); first.focus();
+    }
+  }
+
+  function openPairModal(){
+    document.getElementById("scanStatus").textContent = "";
+    document.getElementById("authStatus").textContent = "";
+    modalFocusTrigger = document.activeElement;
+    document.getElementById("pairBackdrop").hidden = false;
+    document.getElementById("pairClose").focus();
+    document.addEventListener("keydown", trapModalTab);
+
+    if (pairState.paired){
+      document.getElementById("doneMessage").textContent = "Already linked to " + backendUrl() + " as " + pairState.deviceId + ".";
+      showStep("stepDone");
+      return;
+    }
+    showStep("stepScan");
+    provisionDevice();
+  }
+  function closePairModal(){
+    stopCamera();
+    document.getElementById("pairBackdrop").hidden = true;
+    document.removeEventListener("keydown", trapModalTab);
+    if (modalFocusTrigger && typeof modalFocusTrigger.focus === "function") modalFocusTrigger.focus();
+  }
+
+  document.getElementById("pairOpenBtn").addEventListener("click", openPairModal);
+  document.getElementById("pairClose").addEventListener("click", closePairModal);
+  document.getElementById("pairBackdrop").addEventListener("click", function(e){
+    if (e.target === document.getElementById("pairBackdrop")) closePairModal();
+  });
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape" && !document.getElementById("pairBackdrop").hidden) closePairModal();
+  });
+
+  document.getElementById("backendUrl").addEventListener("input", function(){
+    try { localStorage.setItem(LS_URL_KEY, this.value); } catch (e) {}
+  });
+  document.getElementById("btnUseBackend").addEventListener("click", function(){
+    if (!pairState.paired) provisionDevice();
+  });
+
+  document.getElementById("btnScanCamera").addEventListener("click", function(){
+    var statusEl = document.getElementById("scanStatus");
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      statusEl.textContent = "Camera access isn't available in this preview — use “Enter code manually” instead.";
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function(stream){
+      cameraStream = stream;
+      var video = document.getElementById("cameraVideo");
+      video.srcObject = stream;
+      document.getElementById("cameraBox").hidden = false;
+      if (window.BarcodeDetector){
+        statusEl.textContent = "Point the camera at the QR code above.";
+        var detector = new BarcodeDetector({ formats: ["qr_code"] });
+        detectorTimer = setInterval(function(){
+          detector.detect(video).then(function(codes){
+            if (codes.length){ statusEl.textContent = "Code recognized."; advanceToAccount(); }
+          }).catch(function(){});
+        }, 350);
+      } else {
+        statusEl.textContent = "This browser can't auto-read codes — tap “Enter code manually” to continue.";
+      }
+    }).catch(function(){
+      statusEl.textContent = "Camera permission wasn't granted — use “Enter code manually” instead.";
+    });
+  });
+
+  document.getElementById("btnScanManual").addEventListener("click", advanceToAccount);
+  document.getElementById("btnBackToScan").addEventListener("click", function(){ showStep("stepScan"); });
+
+  document.getElementById("authSeg").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-auth]");
+    if (!b) return;
+    pairState.authMode = b.getAttribute("data-auth");
+    document.querySelectorAll("#authSeg button").forEach(function(t){ t.classList.toggle("active", t === b); });
+    document.getElementById("btnFinishPair").textContent = pairState.authMode === "create" ? "Create account & link device" : "Sign in & link device";
+  });
+
+  document.getElementById("btnFinishPair").addEventListener("click", async function(){
+    var email = document.getElementById("authEmail").value.trim();
+    var password = document.getElementById("authPassword").value;
+    var statusEl = document.getElementById("authStatus");
+    var btn = document.getElementById("btnFinishPair");
+
+    if (!email || !password){
+      statusEl.textContent = "Email and password are required.";
+      return;
+    }
+
+    var originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Working…";
+    statusEl.textContent = "";
+
+    try {
+      var authPath = pairState.authMode === "create" ? "/api/auth/signup" : "/api/auth/login";
+      var authRes = await apiFetch(authPath, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: email, password: password })
+      });
+      if (!authRes.ok){
+        statusEl.textContent = (authRes.data && authRes.data.error) || ("Sign-in failed (status " + authRes.status + ").");
+        return;
+      }
+      pairState.token = authRes.data.token;
+
+      var nameInput = document.getElementById("deviceName");
+      var claimRes = await apiFetch("/api/devices/claim", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: "Bearer " + pairState.token },
+        body: JSON.stringify({
+          device_id: pairState.deviceId,
+          claim_code: pairState.claimCode,
+          device_name: nameInput && nameInput.value ? nameInput.value : "Geyser Diverter"
+        })
+      });
+      if (!claimRes.ok){
+        statusEl.textContent = (claimRes.data && claimRes.data.error) || ("Claim failed (status " + claimRes.status + ").");
+        return;
+      }
+
+      pairState.paired = true;
+      savePairing();
+      updatePairUI();
+      document.getElementById("doneMessage").textContent =
+        (pairState.authMode === "create" ? "A new account was created and this" : "This") +
+        " unit (" + pairState.deviceId + ") is now linked to your account on " + backendUrl() + ".";
+      showStep("stepDone");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  });
+  document.getElementById("btnPairDone").addEventListener("click", closePairModal);
+
+  document.getElementById("btnUnpair").addEventListener("click", async function(){
+    if (pairState.token && pairState.deviceId){
+      await apiFetch("/api/devices/" + pairState.deviceId + "/unclaim", {
+        method: "POST",
+        headers: { authorization: "Bearer " + pairState.token }
+      });
+    }
+    pairState.paired = false; pairState.token = null;
+    pairState.deviceId = null; pairState.deviceSecret = null; pairState.claimCode = "";
+    clearPairingStorage();
+    updatePairUI();
+    if (state.conn === "remote"){
+      state.conn = "local";
+      document.querySelectorAll("#connSeg button").forEach(function(t){ t.classList.toggle("active", t.getAttribute("data-conn") === "local"); });
+      display = snapshot(); lastSeenAt = fmtClock(state.simMin);
+    }
+    closePairModal();
+  });
+
+  /* ---------------- device -> backend telemetry push ---------------- */
+  // This tab plays the device's role here: pushes the same telemetry a real
+  // ESP32's cloud_sync module (still unbuilt, Specification §28 V0.10) would
+  // send, authenticated the same way (device_id/device_secret), so pairing
+  // and the remote-fetch path below have something real to exercise.
+  var telemetryPushTimer = null;
+
+  function buildTelemetryPayload(){
+    return {
+      mode: state.mode,
+      heating: state.heating,
+      fault_active: !!state.fault,
+      fault_reason: state.fault ? state.fault.title : null,
+      source: state.source,
+      temperature_c: Number(state.temp.toFixed(2)),
+      target_c: settings.target,
+      pv_kw: Number(state.pv.toFixed(3)),
+      house_kw: Number(state.house.toFixed(3)),
+      battery_soc_pct: Math.round(state.soc),
+      geyser_power_w: Math.round(state.geyserPowerW),
+      geyser_current_a: Number((state.geyserPowerW / 230).toFixed(2)),
+      surplus_w: Math.round(state._surplus || 0)
+    };
+  }
+
+  async function pushTelemetry(){
+    if (!pairState.paired || !pairState.deviceId || !pairState.deviceSecret) return;
+    var res = await apiFetch("/api/device/telemetry", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: basicAuthHeader(pairState.deviceId, pairState.deviceSecret) },
+      body: JSON.stringify(buildTelemetryPayload())
+    });
+    if (!res.ok){ console.warn("[telemetry push] failed:", res.status, res.data); return; }
+    if (res.data && res.data.commands && res.data.commands.length){
+      // Remote command issuing isn't wired into this UI yet (Section 13's
+      // write path) — surfaced here so it's visible, not silently dropped
+      // or falsely acked as if it had been applied.
+      console.log("[telemetry push] " + res.data.commands.length + " pending command(s) — not applied by this test client:", res.data.commands);
+    }
+  }
+  function startTelemetryPush(){
+    if (telemetryPushTimer) return;
+    pushTelemetry();
+    telemetryPushTimer = setInterval(pushTelemetry, 5000);
+  }
+  function stopTelemetryPush(){
+    if (telemetryPushTimer){ clearInterval(telemetryPushTimer); telemetryPushTimer = null; }
+  }
+
+  /* ---------------- backend -> "remote viewer" telemetry fetch ---------------- */
+  // This is the other role the same tab plays: the phone app, reading back
+  // whatever the backend has — a real round trip, not a local shortcut, so
+  // Remote mode only shows what actually made it through the pipeline above.
+  var remoteFetchTimer = null;
+  var remoteFetchFailing = false;
+
+  function telemetryPayloadToDisplay(payload){
+    return {
+      simMin: state.simMin,
+      pv: payload.pv_kw || 0,
+      house: payload.house_kw || 0,
+      soc: payload.battery_soc_pct || 0,
+      temp: payload.temperature_c != null ? payload.temperature_c : 0,
+      geyserPowerW: payload.geyser_power_w || 0,
+      source: payload.source || "off",
+      heating: !!payload.heating,
+      fault: payload.fault_active ? { title: payload.fault_reason || "Fault", detail: "Reported by device telemetry.", clearable: false } : null,
+      surplus: payload.surplus_w || 0
+    };
+  }
+
+  async function fetchRemoteTelemetry(){
+    if (state.conn !== "remote" || !pairState.paired) return;
+    var res = await apiFetch("/api/devices/" + pairState.deviceId + "/telemetry?range=latest", {
+      headers: { authorization: "Bearer " + pairState.token }
+    });
+    if (!res.ok || !res.data || !res.data.latest){
+      remoteFetchFailing = true;
+      render();
+      return;
+    }
+    remoteFetchFailing = false;
+    display = telemetryPayloadToDisplay(res.data.latest);
+    lastSeenAt = res.data.latest.recorded_at || fmtClock(state.simMin);
+    render();
+  }
+  function startRemoteFetch(){
+    if (remoteFetchTimer) return;
+    fetchRemoteTelemetry();
+    remoteFetchTimer = setInterval(fetchRemoteTelemetry, 3000);
+  }
+  function stopRemoteFetch(){
+    if (remoteFetchTimer){ clearInterval(remoteFetchTimer); remoteFetchTimer = null; }
+    remoteFetchFailing = false;
+  }
+
+  (function restoreBackendUrl(){
+    try {
+      var saved = localStorage.getItem(LS_URL_KEY);
+      document.getElementById("backendUrl").value = saved || "https://solar-geyser-diverter-repo-ready.onrender.com";
+    } catch (e) {
+      document.getElementById("backendUrl").value = "https://solar-geyser-diverter-repo-ready.onrender.com";
+    }
+  })();
+  loadPairing();
+  updatePairUI();
+
+  redrawZones(settings.minStart, settings.target, settings.maxTemp);
+  render();
+  setInterval(tick, TICK_MS);
+})();
+</script>
