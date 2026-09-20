@@ -1,4 +1,4 @@
-# Geyser Diverter Firmware — V0.10
+# Geyser Diverter Firmware — V0.6
 
 Staged ESP32-S3 firmware per `../SPECIFICATION.md` §28's build order. Currently
 implements:
@@ -9,10 +9,6 @@ implements:
 > **V0.4** — CT/current measurement.
 > **V0.5** — Manual SSR control at low-risk test conditions.
 > **V0.6** — Inverter RS-485 communication (transport only — see below).
-> **V0.10** — Cloud telemetry sync to the real backend (see below). Built
-> ahead of V0.7-V0.9 since it doesn't depend on the surplus-solar algorithm
-> or a real inverter protocol, and there was a real backend ready to test
-> against.
 
 **Do not wire this to the 230V power stage or the real geyser element.** V0.5
 adds the first output this firmware drives (`SSR_ENABLE`), but per the
@@ -163,46 +159,6 @@ of `rs485_bus.h`'s `write()`/`available()`/`read()`, and `inverter_link.cpp`
 points `active` at it instead of `NullInverter`. Nothing else in this
 codebase needs to change.
 
-**V0.10 (cloud sync) — real telemetry to the real backend, no command
-write path yet.** This is what actually closes the loop with
-`../backend/`: this device pushing genuine sensor readings, not the web
-app's test client pretending to be one.
-
-- `cloud_sync.h/.cpp` — runs its own FreeRTOS task rather than doing HTTPS
-  work from the main loop. A TLS handshake can easily take longer than the
-  5s watchdog timeout on a slow network, and nothing about a slow cloud
-  connection should ever be able to reset the board — same non-blocking
-  requirement as everything else here, just enforced with a separate task
-  instead of a `millis()` state machine, because the Arduino core doesn't
-  offer a non-blocking HTTPS client to poll instead. Every 15s (while Wi-Fi
-  is connected and credentials are saved), it POSTs real readings to
-  `/api/device/telemetry` using HTTP Basic auth (device ID/secret), and
-  logs (but does not apply) any pending commands the backend sends back —
-  same gap as `../webapp/geyser-console-live.html`'s test client; the
-  command write path isn't built on either end yet.
-- `cloud_ca_cert.h` — Let's Encrypt's ISRG Root X1, fetched and verified
-  against its published fingerprint. Real certificate verification
-  (`setCACert()`), not `setInsecure()` — Specification §13 asks for this
-  explicitly. Render (and most hosts) issue through Let's Encrypt, so
-  trusting this one root is enough; if the backend ever moves to a host
-  that doesn't, this is the one thing that needs to change.
-- `/cloud` page — where you enter the backend URL, device ID, and device
-  secret by hand. **There is no factory provisioning tool yet** (a flagged
-  gap, not an oversight) — get a real device ID/secret by calling the
-  backend's manufacturing endpoint yourself (`POST /api/manufacturing/devices`
-  with your `X-Manufacturing-Key`, see `../backend/README.md`), then paste
-  what it returns in here. This is the device's own permanent credential,
-  never the human-facing claim code a customer enters when pairing — those
-  are deliberately different values per Specification §13's two-credential
-  design.
-- Only fields this firmware can actually measure are sent as real numbers
-  (temperature, geyser current/power, grid/inverter current, mains
-  voltage, fault state, manual-test SSR state). Everything the automatic
-  control algorithm (V0.9, not built) or a real inverter protocol (not
-  built) would supply — `mode` beyond `"manual-test"`, `target_c`,
-  `pv_kw`/`house_kw`/`battery_soc_pct` while `NullInverter` is active,
-  `surplus_w` — is sent as `null`, not a made-up value.
-
 ## Build and flash
 
 Requires [PlatformIO](https://platformio.org/) (`pip install platformio`, or the
@@ -348,31 +304,6 @@ actual inverter:
    correct idle-high state) with a scope or logic analyzer — the loopback
    test alone only proves the ESP32 side, not the transceiver.
 
-## Testing cloud sync
-
-1. Get a real device ID and secret from your deployed backend — from a
-   machine with `curl` (your laptop, not the ESP32):
-   ```
-   curl -X POST https://your-backend.example.com/api/manufacturing/devices \
-     -H "X-Manufacturing-Key: your-real-manufacturing-key"
-   ```
-   This returns `device_id`, `device_secret`, and `claim_code` **once** —
-   note the first two down now, you can't fetch them again.
-2. Browse to `/cloud` on the device's local web UI, enter your backend's
-   URL, the `device_id`, and the `device_secret`, then **Save**.
-3. Within ~15s, the root page's "Cloud sync" row should change from
-   `not configured` to `waiting for first sync…` to `OK, Ns ago`. If it
-   instead says `failing: ...`, the error text tells you what's wrong —
-   most commonly a typo'd backend URL, or credentials that don't match
-   what the manufacturing endpoint actually returned.
-4. Confirm it's genuinely real, not just "not erroring": open the
-   backend's device-facing telemetry (via `../webapp/geyser-console-live.html`,
-   paired to this same device ID, viewing in Remote mode) and watch the
-   temperature/current numbers update from what this physical board is
-   actually reading — change something real (breathe on the PT1000, or
-   just watch the current draw of whatever's on the geyser-leg CT) and
-   confirm the number changes on the remote view within a sync cycle.
-
 ## Testing the watchdog
 
 Still the one V0.1 behavior worth proving on the bench, not just trusting:
@@ -403,15 +334,10 @@ gap in the staged plan that isn't just "later," it's "waiting on knowing
 which inverter this targets." Everything else it needs (the interface, the
 transport, the polling loop) is already there.
 
-**The cloud command write path** — the backend can already queue commands
-(`set_mode`, `set_target_temp`, etc.), and this firmware already fetches
-them in every telemetry response, but doesn't apply any of them yet —
-they're only logged. Same gap on the web app's test client.
-
 Beyond that, everything else in the staged plan (Specification §28): the
 surplus-solar algorithm (V0.7) — which is also where CT polarity/import-export
 direction lands, see above — battery protection (V0.8), automatic control
-(V0.9), then full fault handling + data logging
+(V0.9), cloud pairing (V0.10), then full fault handling + data logging
 (V1.0), including the latched, acknowledgement-required fault behavior
 Specification §16 actually asks for; every fault source built so far
 auto-clears once its condition goes away, which is a deliberate
